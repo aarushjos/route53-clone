@@ -22,6 +22,7 @@ def seed_demo_user():
             db.commit()
 
 
+seed_demo_user()
 
 app = FastAPI(title="Route53 Clone API")
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useZone } from "@/lib/zones";
 import { usePathname, useRouter } from "next/navigation";
 import {
   AppLayout,
@@ -46,6 +47,8 @@ export default function ConsoleShell({
   const router = useRouter();
   const pathname = usePathname();
   const { items: notifications } = useNotifications();
+  const zoneIdInPath = /^\/hosted-zones\/(\d+)/.exec(pathname)?.[1];
+  const { data: crumbZone } = useZone(Number(zoneIdInPath ?? 0));
   const [searchText, setSearchText] = useState("");
 
   useEffect(() => {
@@ -73,7 +76,7 @@ export default function ConsoleShell({
     crumbs.push({ text: "Create hosted zone", href: pathname });
   } else if (/^\/hosted-zones\/\d+/.test(pathname)) {
     crumbs.push({
-      text: "Hosted zone details",
+      text: crumbZone?.name ?? "Hosted zone details",
       href: `/hosted-zones/${pathname.split("/")[2]}`,
     });
     if (pathname.endsWith("/records/create")) {

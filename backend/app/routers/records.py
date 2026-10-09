@@ -5,8 +5,9 @@ from sqlalchemy.orm import Session
 from ..db import get_db
 from ..deps import get_current_user
 from ..models import HostedZone, Record
-from ..schemas import RecordCreate, RecordOut, RecordPage, RecordUpdate
+from ..schemas import RecordCreate, RecordOut, RecordPage, RecordUpdate, BulkDelete, BulkDeleteResult
 from ..validators import validate_values
+
 
 router = APIRouter(
     prefix="/zones/{zone_id}/records",
@@ -94,6 +95,16 @@ def create_record(zone_id: int, data: RecordCreate, db: Session = Depends(get_db
     db.refresh(record)
     return record
 
+@router.post("/bulk-delete", response_model=BulkDeleteResult)
+def bulk_delete_records(zone_id: int, data: BulkDelete, db: Session = Depends(get_db)):
+    zone = get_zone_or_404(db, zone_id)
+    ids = set(data.ids)
+    records = db.query(Record).filter(Record.zone_id == zone.id, Record.id.in_(ids)).all()
+    deletable = [r for r in records if not is_protected(zone, r)]
+    for r in deletable:
+        db.delete(r)
+    db.commit()
+    return BulkDeleteResult(deleted=len(deletable), skipped=len(ids) - len(deletable))
 
 @router.get("/{record_id}", response_model=RecordOut)
 def get_record(zone_id: int, record_id: int, db: Session = Depends(get_db)):

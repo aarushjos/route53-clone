@@ -99,3 +99,11 @@ class RecordPage(BaseModel):
     total: int
     page: int
     page_size: int
+
+class BulkDelete(BaseModel):
+    ids: list[int] = Field(min_length=1, max_length=100)
+
+
+class BulkDeleteResult(BaseModel):
+    deleted: int
+    skipped: int

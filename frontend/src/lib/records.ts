@@ -77,3 +77,15 @@ export function useUpdateRecord(zoneId: number, recordId: number) {
     onSuccess: refresh,
   });
 }
+
+export function useBulkDeleteRecords(zoneId: number) {
+  const refresh = useRefreshAfterChange(zoneId);
+  return useMutation({
+    mutationFn: (ids: number[]) =>
+      api<{ deleted: number; skipped: number }>(`/zones/${zoneId}/records/bulk-delete`, {
+        method: "POST",
+        body: JSON.stringify({ ids }),
+      }),
+    onSuccess: refresh,
+  });
+}

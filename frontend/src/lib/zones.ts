@@ -45,6 +45,7 @@ export function useZone(id: number) {
     queryKey: ["zone", id],
     queryFn: () => api<Zone>(`/zones/${id}`),
     retry: false,
+    enabled: id > 0,
   });
 }
 

@@ -9,23 +9,29 @@ import {
 import type { DnsRecord } from "@/lib/types";
 
 type Props = {
-  record: DnsRecord;
+  records: DnsRecord[];
+  skipped: number;
   loading: boolean;
   onClose: () => void;
   onConfirm: () => void;
 };
 
 export default function DeleteRecordModal({
-  record,
+  records,
+  skipped,
   loading,
   onClose,
   onConfirm,
 }: Props) {
+  const shown = records.slice(0, 5);
+  const more = records.length - shown.length;
+  const many = records.length > 1;
+
   return (
     <Modal
       visible
       onDismiss={onClose}
-      header="Delete record"
+      header={many ? `Delete ${records.length} records` : "Delete record"}
       footer={
         <Box float="right">
           <SpaceBetween direction="horizontal" size="xs">
@@ -39,8 +45,27 @@ export default function DeleteRecordModal({
         </Box>
       }
     >
-      Are you sure you want to delete the <strong>{record.type}</strong> record{" "}
-      <strong>{record.name}</strong>? This can&apos;t be undone.
+      <SpaceBetween size="s">
+        <Box>
+          {many
+            ? "These records will be permanently deleted:"
+            : "This record will be permanently deleted:"}
+        </Box>
+        <ul style={{ margin: 0, paddingLeft: 20 }}>
+          {shown.map((r) => (
+            <li key={r.id}>
+              <strong>{r.name}</strong> ({r.type})
+            </li>
+          ))}
+          {more > 0 ? <li>and {more} more</li> : null}
+        </ul>
+        {skipped > 0 ? (
+          <Box color="text-status-inactive">
+            {skipped} selected record{skipped > 1 ? "s" : ""} (the default NS
+            and SOA) can&apos;t be deleted and will be skipped.
+          </Box>
+        ) : null}
+      </SpaceBetween>
     </Modal>
   );
 }

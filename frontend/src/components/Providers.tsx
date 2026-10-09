@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { applyTheme } from "@cloudscape-design/components/theming";
 import { AuthProvider } from "@/lib/auth";
 import { NotificationsProvider } from "@/lib/notifications";
+import { ThemeProvider } from "@/lib/theme";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
@@ -26,10 +27,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <NotificationsProvider>{children}</NotificationsProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <NotificationsProvider>{children}</NotificationsProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }

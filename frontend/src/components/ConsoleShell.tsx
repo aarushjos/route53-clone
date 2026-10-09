@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTheme } from "@/lib/theme";
 import { useZone } from "@/lib/zones";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -47,6 +48,7 @@ export default function ConsoleShell({
   const router = useRouter();
   const pathname = usePathname();
   const { items: notifications } = useNotifications();
+  const { dark, setDark } = useTheme();
   const zoneIdInPath = /^\/hosted-zones\/(\d+)/.exec(pathname)?.[1];
   const { data: crumbZone } = useZone(Number(zoneIdInPath ?? 0));
   const [searchText, setSearchText] = useState("");
@@ -147,10 +149,21 @@ export default function ConsoleShell({
               title: "Support",
             },
             {
-              type: "button",
+              type: "menu-dropdown",
               iconName: "settings",
               ariaLabel: "Settings",
               title: "Settings",
+              items: [
+                {
+                  id: "dark-mode",
+                  text: "Dark mode",
+                  itemType: "checkbox",
+                  checked: dark,
+                },
+              ],
+              onItemClick: ({ detail }) => {
+                if (detail.id === "dark-mode") setDark(!dark);
+              },
             },
             {
               type: "menu-dropdown",

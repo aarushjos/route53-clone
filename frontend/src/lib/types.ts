@@ -13,3 +13,14 @@ export type Page<T> = {
   page: number;
   page_size: number;
 };
+
+export type DnsRecord = {
+  id: number;
+  zone_id: number;
+  name: string;
+  type: string;
+  ttl: number;
+  values: string[];
+  routing_policy: string;
+  created_at: string;
+};

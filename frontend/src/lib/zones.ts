@@ -39,3 +39,23 @@ export function useDeleteZone() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["zones"] }),
   });
 }
+
+export function useZone(id: number) {
+  return useQuery({
+    queryKey: ["zone", id],
+    queryFn: () => api<Zone>(`/zones/${id}`),
+    retry: false,
+  });
+}
+
+export function useUpdateZone(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { comment: string }) =>
+      api<Zone>(`/zones/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["zone", id] });
+      qc.invalidateQueries({ queryKey: ["zones"] });
+    },
+  });
+}

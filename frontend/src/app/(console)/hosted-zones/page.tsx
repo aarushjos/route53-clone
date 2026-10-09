@@ -18,7 +18,7 @@ import { useNotifications } from "@/lib/notifications";
 import type { Zone } from "@/lib/types";
 import { useDeleteZone, useZones } from "@/lib/zones";
 
-const PAGE_SIZE = 3;
+const PAGE_SIZE = 10;
 
 const TYPE_OPTIONS = [
   { label: "All types", value: "" },

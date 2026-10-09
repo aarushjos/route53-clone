@@ -51,6 +51,11 @@ export default function ConsoleShell({
   ];
   if (pathname === "/hosted-zones/create") {
     crumbs.push({ text: "Create hosted zone", href: pathname });
+  } else if (/^\/hosted-zones\/\d+/.test(pathname)) {
+    crumbs.push({
+      text: "Hosted zone details",
+      href: `/hosted-zones/${pathname.split("/")[2]}`,
+    });
   }
 
   return (

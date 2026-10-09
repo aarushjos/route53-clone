@@ -2,8 +2,8 @@
 
 A clone of the AWS Route 53 console (hosted zones and DNS records) with a real backend and persistent storage. It recreates the Route 53 look and workflow; it does not run actual DNS.
 
-**Live demo:** https://YOUR-APP.vercel.app
-**Source:** https://github.com/YOUR-USERNAME/route53-clone
+**Live demo:** [https://YOUR-APP.vercel.app](https://route53-clone-xi.vercel.app/)
+**Source:** https://github.com/aarushjos/route53-clone
 **Demo login** (pre-filled, just click _Sign in_): `admin@example.com` / `admin123`
 
 > The demo uses one shared account and database, so data you create is visible to other visitors.

@@ -6,10 +6,12 @@ import {
   AppLayout,
   BreadcrumbGroup,
   SideNavigation,
+  Flashbar,
   Spinner,
   TopNavigation,
 } from "@cloudscape-design/components";
 import { useAuth } from "@/lib/auth";
+import { useNotifications } from "@/lib/notifications";
 
 const TITLES: Record<string, string> = {
   "/": "Dashboard",
@@ -28,6 +30,7 @@ export default function ConsoleShell({
   const { user, loading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const { items: notifications } = useNotifications();
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -42,6 +45,13 @@ export default function ConsoleShell({
     e.preventDefault(); // stop the full page reload
     if (e.detail.href) router.push(e.detail.href); // navigate without reloading
   };
+  const crumbs = [
+    { text: "Route 53", href: "/" },
+    { text: title, href: section },
+  ];
+  if (pathname === "/hosted-zones/create") {
+    crumbs.push({ text: "Create hosted zone", href: pathname });
+  }
 
   return (
     <>
@@ -73,6 +83,7 @@ export default function ConsoleShell({
       <AppLayout
         headerSelector="#top-nav"
         toolsHide
+        notifications={<Flashbar items={notifications} />}
         navigation={
           <SideNavigation
             activeHref={section}
@@ -92,15 +103,7 @@ export default function ConsoleShell({
             ]}
           />
         }
-        breadcrumbs={
-          <BreadcrumbGroup
-            onFollow={go}
-            items={[
-              { text: "Route 53", href: "/" },
-              { text: title, href: section },
-            ]}
-          />
-        }
+        breadcrumbs={<BreadcrumbGroup onFollow={go} items={crumbs} />}
         content={children}
       />
     </>

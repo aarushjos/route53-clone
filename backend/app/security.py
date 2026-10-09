@@ -2,8 +2,8 @@ from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import jwt
+from .config import SECRET_KEY
 
-SECRET_KEY = "xyz"  # change for prod
 ALGORITHM = "HS256"
 TOKEN_HOURS = 24
 

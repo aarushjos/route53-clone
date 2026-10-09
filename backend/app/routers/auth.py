@@ -6,6 +6,7 @@ from ..deps import get_current_user
 from ..models import User
 from ..schemas import LoginRequest, UserOut
 from ..security import TOKEN_HOURS, create_token, verify_password
+from ..config import COOKIE_SECURE
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -21,6 +22,7 @@ def login(data: LoginRequest, response: Response, db: Session = Depends(get_db))
         value=create_token(user.id),
         httponly=True,  
         samesite="lax",
+        secure=COOKIE_SECURE,
         max_age=TOKEN_HOURS * 3600,
     )
     return user

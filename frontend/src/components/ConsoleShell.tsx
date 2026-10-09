@@ -56,6 +56,11 @@ export default function ConsoleShell({
       text: "Hosted zone details",
       href: `/hosted-zones/${pathname.split("/")[2]}`,
     });
+    if (pathname.endsWith("/records/create")) {
+      crumbs.push({ text: "Create record", href: pathname });
+    } else if (pathname.endsWith("/edit")) {
+      crumbs.push({ text: "Edit record", href: pathname });
+    }
   }
 
   return (

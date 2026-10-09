@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .db import Base, engine, SessionLocal
 from . import models 
-from .routers import auth
+from .routers import auth, zones
 from .security import hash_password
 
 
@@ -36,6 +36,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(zones.router)
 
 @app.get("/health")
 def health():

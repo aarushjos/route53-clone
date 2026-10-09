@@ -14,9 +14,10 @@ import {
   TextFilter,
 } from "@cloudscape-design/components";
 import DeleteZoneModal from "@/components/DeleteZoneModal";
+import EditZoneModal from "@/components/EditZoneModal";
 import { useNotifications } from "@/lib/notifications";
 import type { Zone } from "@/lib/types";
-import { useDeleteZone, useZones } from "@/lib/zones";
+import { useDeleteZone, useUpdateZone, useZones } from "@/lib/zones";
 
 const PAGE_SIZE = 10;
 
@@ -36,14 +37,17 @@ export default function HostedZonesPage() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Zone[]>([]);
   const [toDelete, setToDelete] = useState<Zone | null>(null);
+  const [toEdit, setToEdit] = useState<Zone | null>(null);
+  const [editError, setEditError] = useState("");
 
-  const { data, isLoading } = useZones({
+  const { data, isLoading, isFetching, refetch } = useZones({
     search,
     type: typeOption.value,
     page,
     pageSize: PAGE_SIZE,
   });
   const deleteZone = useDeleteZone();
+  const updateZone = useUpdateZone(toEdit?.id ?? 0);
 
   const total = data?.total ?? 0;
   const pagesCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -70,6 +74,21 @@ export default function HostedZonesPage() {
       );
     } finally {
       setToDelete(null);
+    }
+  };
+
+  const saveEdit = async (comment: string) => {
+    if (!toEdit) return;
+    setEditError("");
+    try {
+      await updateZone.mutateAsync({ comment });
+      notify("success", `Hosted zone ${toEdit.name} was successfully updated.`);
+      setToEdit(null);
+      setSelected([]);
+    } catch (err) {
+      setEditError(
+        err instanceof Error ? err.message : "Could not update the hosted zone",
+      );
     }
   };
 
@@ -106,6 +125,7 @@ export default function HostedZonesPage() {
             header: "Type",
             cell: (z) => (z.type === "public" ? "Public" : "Private"),
           },
+          { id: "created_by", header: "Created by", cell: () => "Route 53" },
           {
             id: "records",
             header: "Record count",
@@ -126,13 +146,37 @@ export default function HostedZonesPage() {
           <Header
             variant="awsui-h1-sticky"
             counter={`(${total})`}
+            description={
+              <>
+                Automatic mode is the current search behavior optimized for best
+                filter results.{" "}
+                <Link href="#" onFollow={(e) => e.preventDefault()}>
+                  To change modes go to settings.
+                </Link>
+              </>
+            }
             actions={
               <SpaceBetween direction="horizontal" size="xs">
+                <Button
+                  iconName="refresh"
+                  ariaLabel="Refresh"
+                  loading={isFetching && !isLoading}
+                  onClick={() => refetch()}
+                />
                 <Button
                   disabled={selected.length === 0}
                   onClick={() => goTo(`/hosted-zones/${selected[0].id}`)}
                 >
                   View details
+                </Button>
+                <Button
+                  disabled={selected.length === 0}
+                  onClick={() => {
+                    setEditError("");
+                    setToEdit(selected[0]);
+                  }}
+                >
+                  Edit
                 </Button>
                 <Button
                   disabled={selected.length === 0}
@@ -156,8 +200,8 @@ export default function HostedZonesPage() {
           <SpaceBetween direction="horizontal" size="xs">
             <TextFilter
               filteringText={searchInput}
-              filteringPlaceholder="Search hosted zones"
-              filteringAriaLabel="Search hosted zones"
+              filteringPlaceholder="Filter hosted zones by name or description"
+              filteringAriaLabel="Filter hosted zones"
               onChange={({ detail }) => setSearchInput(detail.filteringText)}
               onDelayedChange={({ detail }) => {
                 setSearch(detail.filteringText);
@@ -209,6 +253,16 @@ export default function HostedZonesPage() {
           loading={deleteZone.isPending}
           onClose={() => setToDelete(null)}
           onConfirm={confirmDelete}
+        />
+      )}
+      {toEdit && (
+        <EditZoneModal
+          key={toEdit.id}
+          zone={toEdit}
+          loading={updateZone.isPending}
+          error={editError}
+          onClose={() => setToEdit(null)}
+          onSave={saveEdit}
         />
       )}
     </>

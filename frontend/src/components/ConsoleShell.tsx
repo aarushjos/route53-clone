@@ -1,26 +1,41 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   AppLayout,
+  Badge,
   BreadcrumbGroup,
-  SideNavigation,
   Flashbar,
+  Input,
+  SideNavigation,
+  SideNavigationProps,
   Spinner,
   TopNavigation,
 } from "@cloudscape-design/components";
 import { useAuth } from "@/lib/auth";
+import {
+  EXTERNAL_LINKS,
+  NavLink,
+  SECTIONS,
+  TOP_LINKS,
+  titleForPath,
+} from "@/lib/nav";
 import { useNotifications } from "@/lib/notifications";
 
-const TITLES: Record<string, string> = {
-  "/": "Dashboard",
-  "/hosted-zones": "Hosted zones",
-  "/health-checks": "Health checks",
-  "/traffic-policies": "Traffic policies",
-  "/resolver": "Resolver",
-  "/profiles": "Profiles",
-};
+const LOGO_SVG =
+  "<svg xmlns='http://www.w3.org/2000/svg' width='44' height='28' viewBox='0 0 44 28'>" +
+  "<text x='3' y='16' font-family='Arial' font-weight='700' font-size='18' fill='white'>aws</text>" +
+  "<path d='M4 21 Q 20 28 36 20' stroke='#ff9900' stroke-width='2.4' fill='none' stroke-linecap='round'/>" +
+  "</svg>";
+const LOGO_SRC = "data:image/svg+xml," + encodeURIComponent(LOGO_SVG);
+
+const navLink = (l: NavLink): SideNavigationProps.Link => ({
+  type: "link",
+  text: l.text,
+  href: l.href,
+  info: l.badge ? <Badge color="blue">New</Badge> : undefined,
+});
 
 export default function ConsoleShell({
   children,
@@ -31,20 +46,25 @@ export default function ConsoleShell({
   const router = useRouter();
   const pathname = usePathname();
   const { items: notifications } = useNotifications();
+  const [searchText, setSearchText] = useState("");
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
   }, [loading, user, router]);
 
   if (loading || !user) return <Spinner size="large" />;
-
   const section = "/" + (pathname.split("/")[1] ?? "");
-  const title = TITLES[section] ?? "Route 53";
+  const title = titleForPath(section) ?? "Route 53";
 
-  const go = (e: { preventDefault: () => void; detail: { href?: string } }) => {
-    e.preventDefault(); // stop the full page reload
-    if (e.detail.href) router.push(e.detail.href); // navigate without reloading
+  const go = (e: {
+    preventDefault: () => void;
+    detail: { href?: string; external?: boolean };
+  }) => {
+    if (e.detail.external) return;
+    e.preventDefault();
+    if (e.detail.href) router.push(e.detail.href);
   };
+
   const crumbs = [
     { text: "Route 53", href: "/" },
     { text: title, href: section },
@@ -63,12 +83,72 @@ export default function ConsoleShell({
     }
   }
 
+  const navItems: SideNavigationProps.Item[] = [
+    ...TOP_LINKS.map(navLink),
+    ...SECTIONS.map(
+      (s): SideNavigationProps.Section => ({
+        type: "section",
+        text: s.text,
+        defaultExpanded: true,
+        items: s.items.map(navLink),
+      }),
+    ),
+    { type: "divider" },
+    ...EXTERNAL_LINKS.map(
+      (l): SideNavigationProps.Link => ({
+        type: "link",
+        text: l.text,
+        href: l.href,
+        external: true,
+      }),
+    ),
+  ];
+
+  const username = user.email.split("@")[0];
+
   return (
     <>
       <div id="top-nav" style={{ position: "sticky", top: 0, zIndex: 1002 }}>
         <TopNavigation
-          identity={{ href: "/", title: "Route 53", onFollow: go }}
+          identity={{
+            href: "/",
+            logo: { src: LOGO_SRC, alt: "AWS" },
+            onFollow: go,
+          }}
+          search={
+            <Input
+              type="search"
+              value={searchText}
+              placeholder="Search"
+              ariaLabel="Search"
+              onChange={({ detail }) => setSearchText(detail.value)}
+            />
+          }
           utilities={[
+            {
+              type: "button",
+              iconName: "command-prompt",
+              ariaLabel: "CloudShell",
+              title: "CloudShell",
+            },
+            {
+              type: "button",
+              iconName: "notification",
+              ariaLabel: "Notifications",
+              title: "Notifications",
+            },
+            {
+              type: "button",
+              iconName: "status-info",
+              ariaLabel: "Support",
+              title: "Support",
+            },
+            {
+              type: "button",
+              iconName: "settings",
+              ariaLabel: "Settings",
+              title: "Settings",
+            },
             {
               type: "menu-dropdown",
               text: "Global",
@@ -76,8 +156,8 @@ export default function ConsoleShell({
             },
             {
               type: "menu-dropdown",
-              text: user.email,
-              iconName: "user-profile",
+              text: username,
+              description: "1234-5678-9012",
               items: [{ id: "signout", text: "Sign out" }],
               onItemClick: async ({ detail }) => {
                 if (detail.id === "signout") {
@@ -92,6 +172,7 @@ export default function ConsoleShell({
 
       <AppLayout
         headerSelector="#top-nav"
+        footerSelector="#footer"
         toolsHide
         notifications={<Flashbar items={notifications} />}
         navigation={
@@ -99,23 +180,47 @@ export default function ConsoleShell({
             activeHref={section}
             header={{ text: "Route 53", href: "/" }}
             onFollow={go}
-            items={[
-              { type: "link", text: "Dashboard", href: "/" },
-              { type: "link", text: "Hosted zones", href: "/hosted-zones" },
-              { type: "link", text: "Health checks", href: "/health-checks" },
-              {
-                type: "link",
-                text: "Traffic policies",
-                href: "/traffic-policies",
-              },
-              { type: "link", text: "Resolver", href: "/resolver" },
-              { type: "link", text: "Profiles", href: "/profiles" },
-            ]}
+            items={navItems}
           />
         }
         breadcrumbs={<BreadcrumbGroup onFollow={go} items={crumbs} />}
         content={children}
       />
+
+      <div
+        id="footer"
+        style={{
+          position: "fixed",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 1001,
+          display: "flex",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 8,
+          padding: "10px 16px",
+          background: "#161d26",
+          color: "#e9ebed",
+          fontSize: 14,
+        }}
+      >
+        <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+          <span>CloudShell</span>
+          <span>Agent Toolkit for AWS</span>
+          <span>Feedback</span>
+          <span>Console Mobile App</span>
+        </div>
+        <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+          <span>
+            © {new Date().getFullYear()}, Amazon Web Services, Inc. or its
+            affiliates.
+          </span>
+          <span>Privacy</span>
+          <span>Terms</span>
+          <span>Cookie preferences</span>
+        </div>
+      </div>
     </>
   );
 }

@@ -17,10 +17,14 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     let message = res.statusText;
     try {
       const body = await res.json();
+      const first = body.detail?.[0];
+      const index = first?.loc?.find((p: unknown) => typeof p === "number");
       message =
         typeof body.detail === "string"
           ? body.detail
-          : body.detail?.[0]?.msg ?? message;
+          : first
+            ? `${index !== undefined ? `Record ${index + 1}: ` : ""}${String(first.msg).replace(/^Value error, /, "")}`
+            : message;
     } catch {
     }
     throw new ApiError(res.status, message);

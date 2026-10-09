@@ -107,3 +107,6 @@ class BulkDelete(BaseModel):
 class BulkDeleteResult(BaseModel):
     deleted: int
     skipped: int
+
+class RecordBatchCreate(BaseModel):
+    records: list[RecordCreate] = Field(min_length=1, max_length=50)

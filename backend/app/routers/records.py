@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from ..db import get_db
 from ..deps import get_current_user
 from ..models import HostedZone, Record
-from ..schemas import RecordCreate, RecordOut, RecordPage, RecordUpdate, BulkDelete, BulkDeleteResult
+from ..schemas import RecordCreate, RecordOut, RecordPage, RecordUpdate, BulkDelete, BulkDeleteResult, RecordBatchCreate
 from ..validators import validate_values
 
 
@@ -41,6 +41,14 @@ def full_name(zone: HostedZone, name: str) -> str:
 def is_protected(zone: HostedZone, record: Record) -> bool:
     return record.type == "SOA" or (record.type == "NS" and record.name == zone.name)
 
+def check_conflicts(existing: list[Record], name: str, rtype: str) -> None:
+    if any(r.type == rtype for r in existing):
+        raise HTTPException(status_code=409, detail=f"A {rtype} record named {name} already exists")
+    if rtype == "CNAME" and existing:
+        raise HTTPException(status_code=409, detail="A CNAME cannot share a name with another record")
+    if rtype != "CNAME" and any(r.type == "CNAME" for r in existing):
+        raise HTTPException(status_code=409, detail="This name already has a CNAME record")
+
 
 @router.get("", response_model=RecordPage)
 def list_records(
@@ -75,12 +83,7 @@ def create_record(zone_id: int, data: RecordCreate, db: Session = Depends(get_db
     name = full_name(zone, data.name)
 
     same_name = db.query(Record).filter(Record.zone_id == zone.id, Record.name == name).all()
-    if any(r.type == data.type for r in same_name):
-        raise HTTPException(status_code=409, detail=f"A {data.type} record named {name} already exists")
-    if data.type == "CNAME" and same_name:
-        raise HTTPException(status_code=409, detail="A CNAME cannot share a name with another record")
-    if data.type != "CNAME" and any(r.type == "CNAME" for r in same_name):
-        raise HTTPException(status_code=409, detail="This name already has a CNAME record")
+    check_conflicts(same_name, name, data.type)
 
     record = Record(
         zone_id=zone.id,
@@ -94,6 +97,39 @@ def create_record(zone_id: int, data: RecordCreate, db: Session = Depends(get_db
     db.commit()
     db.refresh(record)
     return record
+
+@router.post("/batch", response_model=list[RecordOut], status_code=201)
+def create_records_batch(zone_id: int, data: RecordBatchCreate, db: Session = Depends(get_db)):
+    zone = get_zone_or_404(db, zone_id)
+    names = {full_name(zone, item.name) for item in data.records}
+
+    by_name: dict[str, list[Record]] = {}
+    for r in db.query(Record).filter(Record.zone_id == zone.id, Record.name.in_(list(names))).all():
+        by_name.setdefault(r.name, []).append(r)
+
+    created: list[Record] = []
+    for i, item in enumerate(data.records, start=1):
+        name = full_name(zone, item.name)
+        try:
+            check_conflicts(by_name.get(name, []), name, item.type)
+        except HTTPException as e:
+            raise HTTPException(status_code=e.status_code, detail=f"Record {i}: {e.detail}")
+        rec = Record(
+            zone_id=zone.id,
+            name=name,
+            type=item.type,
+            ttl=item.ttl,
+            values=item.values,
+            routing_policy=item.routing_policy,
+        )
+        by_name.setdefault(name, []).append(rec) 
+        created.append(rec)
+
+    db.add_all(created) 
+    db.commit()
+    for rec in created:
+        db.refresh(rec)
+    return created
 
 @router.post("/bulk-delete", response_model=BulkDeleteResult)
 def bulk_delete_records(zone_id: int, data: BulkDelete, db: Session = Depends(get_db)):

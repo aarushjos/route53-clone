@@ -89,3 +89,17 @@ export function useBulkDeleteRecords(zoneId: number) {
     onSuccess: refresh,
   });
 }
+
+export function useCreateRecords(zoneId: number) {
+  const refresh = useRefreshAfterChange(zoneId);
+  return useMutation({
+    mutationFn: (records: { name: string; type: string; ttl: number; values: string[] }[]) =>
+      api<DnsRecord[]>(`/zones/${zoneId}/records/batch`, {
+        method: "POST",
+        body: JSON.stringify({
+          records: records.map((r) => ({ ...r, routing_policy: "Simple" })),
+        }),
+      }),
+    onSuccess: refresh,
+  });
+}
